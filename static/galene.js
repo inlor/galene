@@ -39,20 +39,6 @@ let serverConnection;
  */
 let fallbackUserPass = null;
 
-/** @type {Translation} */
-let trans = new Translation();
-
-/**
- * Change language
- */
-async function changeLanguage(){
-    const element = document.getElementById('languageselect');
-    await element.addEventListener('change', async function() {
-        const language = element.options[element.selectedIndex].value;
-        trans.selectLanguage(language);
-        await trans.analyse();
-    })
-}
 
 /**
  * @param {string} username
@@ -322,7 +308,7 @@ function setConnected(connected) {
         fillLogin();
         userbox.classList.add('invisible');
         connectionbox.classList.remove('invisible');
-        displayError(trans.get('disconnected'), 'error');
+        displayError('Disconnected', 'error');
         hideVideo();
         closeVideoControls();
     }
@@ -358,7 +344,7 @@ function gotDownStream(c) {
     };
     c.onerror = function(e) {
         console.error(e);
-        displayError(e.toString());
+        displayError(e);
     };
     c.ondowntrack = function(track, transceiver, label, stream) {
         setMedia(c, false);
@@ -616,7 +602,7 @@ getInputElement('fileinput').onchange = function(e) {
     for(let i = 0; i < files.length; i++) {
         addFileMedia(files[i]).catch(e => {
             console.error(e);
-            displayError(e.toString());
+            displayError(e);
         });
     }
     input.value = '';
@@ -809,7 +795,7 @@ function newUpStream(localId) {
     };
     c.onerror = function(e) {
         console.error(e);
-        displayError(e.toString());
+        displayError(e);
     };
     c.onnegotiationcompleted = function() {
         setMaxVideoThroughput(c, getMaxVideoThroughput());
@@ -1051,7 +1037,7 @@ async function addLocalMedia(localId) {
     if(settings.filter) {
         filter = filters[settings.filter];
         if(!filter) {
-            displayWarning(trans.get('unknown-filter') + settings.filter);
+            displayWarning(`Unknown filter ${settings.filter}`);
         }
     }
 
@@ -1204,7 +1190,7 @@ async function addFileMedia(file) {
         /** @ts-ignore */
         stream = video.mozCaptureStream();
     else {
-        displayError(trans.get('playback-unsupported'));
+        displayError("This browser doesn't support file playback");
         return;
     }
 
@@ -1230,7 +1216,7 @@ async function addFileMedia(file) {
             let muted = getSettings().localMute;
             if(presenting && !muted) {
                 setLocalMute(true, true);
-                displayWarning(trans.get('you-muted'));
+                displayWarning('You have been muted');
             }
         }
         c.pc.addTrack(t, stream);
@@ -1531,7 +1517,7 @@ function registerControlHandlers(media, container) {
                     /** @ts-ignore */
                     media.requestPictureInPicture();
                 } else {
-                    displayWarning(trans.get('pic-in-pic-unsupported'));
+                    displayWarning('Picture in Picture not supported.');
                 }
             };
         } else {
@@ -1553,7 +1539,7 @@ function registerControlHandlers(media, container) {
                     /** @ts-ignore */
                     media.webkitRequestFullscreen();
                 } else {
-                    displayWarning(trans.get('fullscreen-unsupported'));
+                    displayWarning('Full screen not supported!');
                 }
             };
         } else {
@@ -1790,7 +1776,7 @@ async function gotJoined(kind, group, perms, message) {
 
     switch(kind) {
     case 'fail':
-        displayError(trans.get('server-say') + message);
+        displayError('The server said: ' + message);
         this.close();
         setButtonsVisibility();
         return;
@@ -1810,18 +1796,18 @@ async function gotJoined(kind, group, perms, message) {
             return;
         break;
     default:
-        displayError(trans.get('unknown-join-message'));
+        displayError('Unknown join message');
         this.close();
         return;
     }
 
     let input = /** @type{HTMLTextAreaElement} */
         (document.getElementById('input'));
-    input.placeholder = trans.get('type-help');
+    input.placeholder = 'Type /help for help';
     setTimeout(() => {input.placeholder = '';}, 8000);
 
     if(typeof RTCPeerConnection === 'undefined')
-        displayWarning(trans.get('webrtc-unsupported'));
+        displayWarning("This browser doesn't support WebRTC");
     else
         this.request(getSettings().request);
 
@@ -1841,7 +1827,9 @@ async function gotJoined(kind, group, perms, message) {
                 button.disabled = false;
             }
         } else {
-            displayMessage(trans.get('press-ready'));
+            displayMessage(
+                "Press Ready to enable your camera or microphone"
+            );
         }
     }
 }
@@ -1862,7 +1850,7 @@ function gotUserMessage(id, dest, username, time, privileged, kind, message) {
     case 'info':
         let from = id ? (username || 'Anonymous') : 'The Server';
         if(privileged)
-            displayError(`${from} ${trans.get('said')} ${message}`, kind);
+            displayError(`${from} said: ${message}`, kind);
         else
             console.error(`Got unprivileged message of kind ${kind}`);
         break;
@@ -1870,7 +1858,7 @@ function gotUserMessage(id, dest, username, time, privileged, kind, message) {
         if(privileged) {
             setLocalMute(true, true);
             let by = username ? ' by ' + username : '';
-            displayWarning(trans.get('you-muted') + by);
+            displayWarning(`You have been muted${by}`);
         } else {
             console.error(`Got unprivileged message of kind ${kind}`);
         }
@@ -2472,7 +2460,7 @@ function handleInput() {
             } else {
                 let c = commands[cmd];
                 if(!c) {
-                    displayError( trans.get('unknown-command')+ cmd + trans.get('type-help'));
+                    displayError(`Uknown command /${cmd}, type /help for help`);
                     return;
                 }
                 if(c.predicate) {
@@ -2496,7 +2484,7 @@ function handleInput() {
     }
 
     if(!serverConnection || !serverConnection.socket) {
-        displayError(trans.get("not-connected"));
+        displayError("Not connected.");
         return;
     }
 
@@ -2559,7 +2547,7 @@ function chatResizer(e) {
 document.getElementById('resizer').addEventListener('mousedown', chatResizer, false);
 
 /**
- * @param {string} message
+ * @param {unknown} message
  * @param {string} [level]
  */
 function displayError(message, level) {
@@ -2594,14 +2582,14 @@ function displayError(message, level) {
 }
 
 /**
- * @param {string} message
+ * @param {unknown} message
  */
 function displayWarning(message) {
     return displayError(message, "warning");
 }
 
 /**
- * @param {string} message
+ * @param {unknown} message
  */
 function displayMessage(message) {
     return displayError(message, "info");
@@ -2720,14 +2708,11 @@ async function serverConnect() {
         await serverConnection.connect(url);
     } catch(e) {
         console.error(e);
-        displayError(e.message ? e.message : trans.get('can-t-connect') + url);
+        displayError(e.message ? e.message : "Couldn't connect to " + url);
     }
 }
 
-async function start() {
-    await trans.analyse();
-    await changeLanguage();
-
+function start() {
     group = decodeURIComponent(location.pathname.replace(/^\/[a-z]*\//, ''));
     let title = group.charAt(0).toUpperCase() + group.slice(1);
     if(group !== '') {
